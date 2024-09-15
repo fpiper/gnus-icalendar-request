@@ -53,10 +53,6 @@ END:VEVENT"))
       (should-not (string-match "^VERSION:" (match-string 1 vcalendar)))
       (should (string-match "^PRODID:\\(\n\\|.\\)*END:VCALENDAR" vcalendar))
       (should-not (string-match "^PRODID:" (match-string 1 vcalendar)))
-      ;; Ensure we have a timezone entry
-      (should (string-match "^\\(BEGIN:VTIMEZONE\\(\n\\|.\\)*END:VTIMEZONE\\)" vcalendar))
-      (let ((vtimezone (match-string 1 vcalendar)))
-        )
       ;; Ensure the vevent remains intact
       (should (string-match "^\\(BEGIN:VEVENT\\(\n\\|.\\)*\nEND:VEVENT\\)" vcalendar))
       (should (string-match (match-string 1 vcalendar) event)))

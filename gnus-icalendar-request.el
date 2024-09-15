@@ -80,69 +80,14 @@
 
 ;; Vcalendar creation
 
-;; I have not yet found a good way to create vtimezone accurately from
-;; scratch. For now hardcoded for CET/CEST and crude general
-;; implementation below.
-(defvar gnus-icalendar-vtimezone-times
-  '(CEST "BEGIN:DAYLIGHT
-TZOFFSETFROM:+0100
-TZOFFSETTO:+0200
-TZNAME:CEST
-DTSTART:19700329T020000
-RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=3
-END:DAYLIGHT
-BEGIN:STANDARD
-TZOFFSETFROM:+0200
-TZOFFSETTO:+0100
-TZNAME:CET
-DTSTART:19701025T030000
-RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=10
-END:STANDARD"
-        CET "BEGIN:DAYLIGHT
-TZOFFSETFROM:+0100
-TZOFFSETTO:+0200
-TZNAME:CEST
-DTSTART:19700329T020000
-RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=3
-END:DAYLIGHT
-BEGIN:STANDARD
-TZOFFSETFROM:+0200
-TZOFFSETTO:+0100
-TZNAME:CET
-DTSTART:19701025T030000
-RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=10
-END:STANDARD")
-  "Timezone information about standard and daylight savings time used in VCALENDAR parts.")
-
-(defun gnus-icalendar--default-vtimezone (&optional zone)
-  "Return default VTIMEZONE information for the current time zone or ZONE if provided."
-  (let ((time-zone (current-time-zone nil zone)))
-    (format "BEGIN:STANDARD
-DTSTART:%s
-TZOFFSETTO:%s
-TZOFFSETFROM:+0000
-TZNAME:%s
-END:STANDARD"
-            (format-time-string "%Y%m%dT%H%M%S" 0) ;; set effective timezone start date to epoch
-            (format-time-string "%z" (current-time) time-zone) ;; time zone offset
-            (cadr time-zone)
-            )))
-
 (defun gnus-icalendar--build-vcalendar-from-vevent (event)
   "Create VCALENDAR part with VEVENT part EVENT."
-  (let* ((time-zone (cadr (current-time-zone)))
-         (vtimezone (mapconcat #'identity `("BEGIN:VTIMEZONE"
-                                            ,(format "TZID:%s" time-zone)
-                                            ,(or (plist-get gnus-icalendar-vtimezone-times (intern time-zone))
-                                                 (gnus-icalendar--default-vtimezone))
-                                            "END:VTIMEZONE") "\n")))
-    (mapconcat #'identity `("BEGIN:VCALENDAR"
-                            "PRODID:Gnus"
-                            "VERSION:2.0"
-                            "METHOD:REQUEST"
-                            ,vtimezone
-                            ,event
-                            "END:VCALENDAR") "\n")))
+  (mapconcat #'identity `("BEGIN:VCALENDAR"
+                          "PRODID:Gnus"
+                          "VERSION:2.0"
+                          "METHOD:REQUEST"
+                          ,event
+                          "END:VCALENDAR") "\n"))
 
 (defun gnus-icalendar-event-message-insert-request (event)
   "Insert text/calendar part into message with request for VEVENT
@@ -172,7 +117,7 @@ or will be asked for if nil. Same for location."
                      (with-temp-buffer
                        (org-time-stamp nil)
                        (buffer-string))))
-           (start-time (org-timestamp-to-time
+           (start-time (org-timestamp-to-time  ;; in UTC
                         (org-timestamp-from-string date) nil))
            (end-time (org-timestamp-to-time ;; set end-time if input was a time-range
                       (org-timestamp-from-string date) t))
