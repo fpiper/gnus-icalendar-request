@@ -133,15 +133,6 @@ or will be asked for if nil. Same for location."
                          (org-read-date nil t nil "End time:" start-time)
                        end-time))
            ;; TODO: better differentiate date-time ranges and date (whole-day) ranges
-           (uid (if (featurep 'org-id)
-                    (org-id-uuid)
-                  (format "%s@%s"
-                          (number-to-string (abs (random)))
-                          (md5 (format "%s%s%s%s"
-                                       (emacs-pid)
-                                       user-full-name
-                                       user-mail-address
-                                       (system-name))))))
            (recur nil) ;; TODO
            (location (or location (read-string "Event location: ")))
            (description (when (message-goto-body)
@@ -165,6 +156,12 @@ or will be asked for if nil. Same for location."
                                       (save-restriction
                                         (message-narrow-to-headers)
                                         (message-fetch-field "Cc")))))
+           (uid (icalendar--create-uid (format "%s%s%s%s"
+                                               summary
+                                               description
+                                               location
+                                               organizer)
+                                       (format "DTSTART:%s" start-time)))
            (event (gnus-icalendar-event-request :uid uid
                                                 :recur recur
                                                 :location location
