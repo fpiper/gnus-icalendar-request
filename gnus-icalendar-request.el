@@ -31,12 +31,20 @@
   (when (member role '("req" "opt"))
     (format "ATTENDEE;PARTSTAT=NEEDS-ACTION;ROLE=%s-PARTICIPANT;RSVP=TRUE:mailto:%s" (upcase role) attendee)))
 
-(defun gnus-icalendar-event--create-attendee-list (req opt)
+(defun gnus-icalendar-event--create-attendee-list (req &optional opt role)
+  "Format a list of event attendees.
+
+REQ is a list of required attendees emails, OPT of optional
+attendees and ROLE can be used to override the REQ attendees
+role."
   (concat
-   (mapconcat (lambda (req) (gnus-icalendar-event--format-attendee req "req")) req "\n")
+   (when req
+     (mapconcat (lambda (req) (gnus-icalendar-event--format-attendee req (or role "req"))) req "\n"))
    (when opt
-     "\n"
-     (mapconcat (lambda (opt) (gnus-icalendar-event--format-attendee opt "opt")) opt "\n"))))
+     (concat "\n"
+             (gnus-icalendar-event--create-attendee-list opt nil "opt"))
+     ;; (mapconcat (lambda (opt) (gnus-icalendar-event--format-attendee opt "opt")) opt "\n")
+     )))
 
 (defun gnus-icalendar-event--ical-from-event (event)
   (with-slots (summary description location organizer recur uid start-time end-time req-participants opt-participants) event

@@ -29,7 +29,7 @@
 (require 'ert)
 (require 'gnus-icalendar-request)
 
-(ert-deftest gnus-icalendar-create-vcalendar ()
+(ert-deftest gnus-icalendar--create-vcalendar ()
   ""
   (let ((tz (getenv "TZ"))
         (event "\
@@ -59,3 +59,70 @@ END:VEVENT"))
       (should (string-match "^\\(BEGIN:VEVENT\\(\n\\|.\\)*\nEND:VEVENT\\)" vcalendar))
       (should (string-match (match-string 1 vcalendar) event)))
     (setenv "TZ" tz)))
+
+(ert-deftest gnus-icalendar--ical-from-event ()
+  ""
+  (let* ((event-string "\
+BEGIN:VEVENT
+DTSTAMP:20240915T120000Z
+DTSTART:20240917T080000Z
+DTEND:20240917T100000Z
+SUMMARY:Party
+DESCRIPTION:Lots of reasons to celebrate!
+ATTENDEE;PARTSTAT=NEEDS-ACTION;ROLE=REQ-PARTICIPANT;RSVP=TRUE:mailto:required@company.invalid
+ATTENDEE;PARTSTAT=NEEDS-ACTION;ROLE=OPT-PARTICIPANT;RSVP=TRUE:mailto:optional@company.invalid
+LOCATION:Party room
+ORGANIZER:mailto:organizer@company.invalid
+UID:ac44f43e-f5cd-4b0a-878e-add01aeb12dd
+SEQUENCE:0
+END:VEVENT")
+         (vcalendar-string (format "\
+BEGIN:VCALENDAR
+PRODID:-//Google Inc//Google Calendar 70.9054//EN
+VERSION:2.0
+CALSCALE:GREGORIAN
+METHOD:REQUEST
+%s
+END:VCALENDAR"
+                                   event-string))
+         (event (gnus-icalendar-tests--get-ical-event vcalendar-string))
+         (ical (gnus-icalendar-event--ical-from-event event)))
+    (should (string-match "^BEGIN:VEVENT$" ical))
+    (should (string-match "^END:VEVENT$" ical))
+    (should (string-match "^DTSTAMP:" ical))
+    (should (string-match "^DTSTART:20240917T080000Z$" ical))
+    (should (string-match "^DTEND:20240917T100000Z$" ical))
+    (should (string-match "^SUMMARY:Party$" ical))
+    (should (string-match "^DESCRIPTION:Lots of reasons to celebrate!$" ical))
+    (should (string-match "^ATTENDEE;PARTSTAT=NEEDS-ACTION;ROLE=REQ-PARTICIPANT;RSVP=TRUE:mailto:required@company.invalid$" ical))
+    (should (string-match "^ATTENDEE;PARTSTAT=NEEDS-ACTION;ROLE=OPT-PARTICIPANT;RSVP=TRUE:mailto:optional@company.invalid$" ical))
+    (should (string-match "^LOCATION:Party room$" ical))
+    (should (string-match "^ORGANIZER:mailto:organizer@company.invalid$" ical))
+    (should (string-match "^UID:ac44f43e-f5cd-4b0a-878e-add01aeb12dd$" ical))
+    (should (string-match "^SEQUENCE:0$" ical))))
+
+(ert-deftest gnus-icalendar-event--create-attendee-list ()
+  ""
+  (let* ((req-part '("Colleague1 <required@company.invalid>"
+                    "Cool Colleague <required2@company.invalid>"))
+        (opt-part '("My boss <required@company.invalid>"))
+        (attendees (gnus-icalendar-event--create-attendee-list req-part opt-part))
+        (expected-attendee-entry "^ATTENDEE.*;ROLE=%s-PARTICIPANT.*;RSVP=TRUE:mailto:%s.*$"))
+    (should (string-match (format expected-attendee-entry
+                                  "REQ" (nth 0 req-part))
+                          attendees))
+    (should (string-match (format expected-attendee-entry
+                                  "REQ" (nth 1 req-part))
+                          attendees))
+    (should (string-match (format expected-attendee-entry
+                                  "OPT" (nth 0 opt-part))
+                          attendees))))
+(ert-deftest gnus-icalendar-event--create-empty-required-attendee-list ()
+  ""
+  (let* ((req-part nil)
+        (opt-part '("My boss <required@company.invalid>"))
+        (attendees (gnus-icalendar-event--create-attendee-list req-part opt-part))
+        (expected-attendee-entry "^ATTENDEE.*;ROLE=%s-PARTICIPANT.*;RSVP=TRUE:mailto:%s.*$"))
+    (should (string-match (format expected-attendee-entry
+                                  "OPT" (nth 0 opt-part))
+                          attendees))))
