@@ -83,7 +83,7 @@
 (defun gnus-icalendar--build-vcalendar-from-vevent (event)
   "Create VCALENDAR part with VEVENT part EVENT."
   (mapconcat #'identity `("BEGIN:VCALENDAR"
-                          "PRODID:Gnus"
+                          "PRODID:-//Emacs//NONSGML gnus-icalendar.el//EN"
                           "VERSION:2.0"
                           "METHOD:REQUEST"
                           ,event

@@ -48,11 +48,13 @@ SEQUENCE:0
 END:VEVENT"))
     (setenv "TZ" "CET-1CEST,M3.5.0/2,M10.5.0/3")
     (let ((vcalendar (gnus-icalendar--build-vcalendar-from-vevent event)))
-      ;; Ensure there is exactly one of version and prodid
+      ;; Ensure there is exactly one of VERSION and PRODID
       (should (string-match "^VERSION:2.0\\(\n\\|.\\)*END:VCALENDAR" vcalendar))
       (should-not (string-match "^VERSION:" (match-string 1 vcalendar)))
       (should (string-match "^PRODID:\\(\n\\|.\\)*END:VCALENDAR" vcalendar))
       (should-not (string-match "^PRODID:" (match-string 1 vcalendar)))
+      ;; METHOD should be REQUEST
+      (should (string-match "^METHOD:REQUEST$" vcalendar))
       ;; Ensure the vevent remains intact
       (should (string-match "^\\(BEGIN:VEVENT\\(\n\\|.\\)*\nEND:VEVENT\\)" vcalendar))
       (should (string-match (match-string 1 vcalendar) event)))
