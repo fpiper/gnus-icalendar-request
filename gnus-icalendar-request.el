@@ -1,6 +1,6 @@
 ;;; gnus-icalendar-request.el --- Create icalendar events  -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2020  Ferdinand Pieper
+;; Copyright (C) 2020,2024  Ferdinand Pieper
 
 ;; Author: Ferdinand Pieper <mail@pie.tf>
 ;; Keywords: mail, icalendar
@@ -27,11 +27,11 @@
 
 (require 'gnus-icalendar)
 
-(defun gnus-icalendar-event--format-attendee (attendee role)
+(defun gnus-icalendar--format-attendee (attendee role)
   (when (member role '("req" "opt"))
     (format "ATTENDEE;PARTSTAT=NEEDS-ACTION;ROLE=%s-PARTICIPANT;RSVP=TRUE:mailto:%s" (upcase role) attendee)))
 
-(defun gnus-icalendar-event--create-attendee-list (req &optional opt role)
+(defun gnus-icalendar--create-attendee-list (req &optional opt role)
   "Format a list of event attendees.
 
 REQ is a list of required attendees emails, OPT of optional
@@ -39,14 +39,15 @@ attendees and ROLE can be used to override the REQ attendees
 role."
   (concat
    (when req
-     (mapconcat (lambda (req) (gnus-icalendar-event--format-attendee req (or role "req"))) req "\n"))
+     (mapconcat
+      (lambda (req) (gnus-icalendar--format-attendee req (or role "req")))
+      req "\n"))
    (when opt
-     (concat "\n"
-             (gnus-icalendar-event--create-attendee-list opt nil "opt"))
-     ;; (mapconcat (lambda (opt) (gnus-icalendar-event--format-attendee opt "opt")) opt "\n")
-     )))
+     (concat
+      "\n"
+      (gnus-icalendar--create-attendee-list opt nil "opt")))))
 
-(defun gnus-icalendar-event--ical-from-event (event)
+(defun gnus-icalendar--ical-from-event (event)
   (with-slots (summary description location organizer recur uid start-time end-time req-participants opt-participants) event
     (let ((dtstamp (format-time-string "DTSTAMP:%Y%m%dT%H%M%SZ" nil t)) ;; current UTC time
           (summary (format "SUMMARY:%s" summary))
@@ -60,7 +61,7 @@ role."
                                    (buffer-string))))) ;; TODO: How to do this properly?
           (dtstart (format-time-string "DTSTART:%Y%m%dT%H%M%SZ" start-time t)) ;; start-time in UTC
           (dtend (format-time-string "DTEND:%Y%m%dT%H%M%SZ" end-time t)) ;; end-time in UTC
-          (attendee (gnus-icalendar-event--create-attendee-list req-participants opt-participants))
+          (attendee (gnus-icalendar--create-attendee-list req-participants opt-participants))
           (location (when (and (stringp location) (not (string-empty-p location)))
                       (format "LOCATION:%s" location)))
           (organizer (format "ORGANIZER:mailto:%s" organizer))
@@ -97,15 +98,15 @@ role."
                           ,event
                           "END:VCALENDAR") "\n"))
 
-(defun gnus-icalendar-event-message-insert-request (event)
+(defun gnus-icalendar-message-insert-request (event)
   "Insert text/calendar part into message with request for VEVENT
   specified in EVENT."
   (when (provided-mode-derived-p major-mode 'message-mode)
     (mml-insert-part "text/calendar; method=\"REQUEST\"; charset=UTF-8")
     (insert (gnus-icalendar--build-vcalendar-from-vevent
-             (gnus-icalendar-event--ical-from-event event)))))
+             (gnus-icalendar--ical-from-event event)))))
 
-(defun gnus-icalendar-event-from-message-and-insert (&optional date location)
+(defun gnus-icalendar-from-message-and-insert (&optional date location)
   "Create a event request based on the current message.
 
 Direct recipients of the message (in To header) are interpreted
@@ -162,7 +163,7 @@ or will be asked for if nil. Same for location."
                                                location
                                                organizer)
                                        (format "DTSTART:%s" start-time)))
-           (event (gnus-icalendar-event-request :uid uid
+           (event (gnus-icalendar-request :uid uid
                                                 :recur recur
                                                 :location location
                                                 :description description
@@ -182,7 +183,7 @@ or will be asked for if nil. Same for location."
         (mml-insert-part "text/plain")
         (insert description "\n")
         (re-search-forward "<#/part>\n"))
-      (gnus-icalendar-event-message-insert-request event))))
+      (gnus-icalendar-message-insert-request event))))
 
 (provide 'gnus-icalendar-request)
 ;;; gnus-icalendar-request.el ends here

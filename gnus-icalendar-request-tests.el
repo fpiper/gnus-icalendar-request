@@ -29,7 +29,7 @@
 (require 'ert)
 (require 'gnus-icalendar-request)
 
-(ert-deftest gnus-icalendar--create-vcalendar ()
+(ert-deftest gnus-icalendar--build-vcalendar-from-vevent ()
   ""
   (let ((tz (getenv "TZ"))
         (event "\
@@ -86,7 +86,7 @@ METHOD:REQUEST
 END:VCALENDAR"
                                    event-string))
          (event (gnus-icalendar-tests--get-ical-event vcalendar-string))
-         (ical (gnus-icalendar-event--ical-from-event event)))
+         (ical (gnus-icalendar--ical-from-event event)))
     (should (string-match "^BEGIN:VEVENT$" ical))
     (should (string-match "^END:VEVENT$" ical))
     (should (string-match "^DTSTAMP:" ical))
@@ -101,13 +101,13 @@ END:VCALENDAR"
     (should (string-match "^UID:ac44f43e-f5cd-4b0a-878e-add01aeb12dd$" ical))
     (should (string-match "^SEQUENCE:0$" ical))))
 
-(ert-deftest gnus-icalendar-event--create-attendee-list ()
+(ert-deftest gnus-icalendar--create-attendee-list ()
   ""
   (let* ((req-part '("Colleague1 <required@company.invalid>"
-                    "Cool Colleague <required2@company.invalid>"))
-        (opt-part '("My boss <required@company.invalid>"))
-        (attendees (gnus-icalendar-event--create-attendee-list req-part opt-part))
-        (expected-attendee-entry "^ATTENDEE.*;ROLE=%s-PARTICIPANT.*;RSVP=TRUE:mailto:%s.*$"))
+                     "Cool Colleague <required2@company.invalid>"))
+         (opt-part '("My boss <required@company.invalid>"))
+         (attendees (gnus-icalendar--create-attendee-list req-part opt-part))
+         (expected-attendee-entry "^ATTENDEE.*;ROLE=%s-PARTICIPANT.*;RSVP=TRUE:mailto:%s.*$"))
     (should (string-match (format expected-attendee-entry
                                   "REQ" (nth 0 req-part))
                           attendees))
@@ -117,12 +117,13 @@ END:VCALENDAR"
     (should (string-match (format expected-attendee-entry
                                   "OPT" (nth 0 opt-part))
                           attendees))))
-(ert-deftest gnus-icalendar-event--create-empty-required-attendee-list ()
+(ert-deftest gnus-icalendar--create-empty-required-attendee-list ()
   ""
   (let* ((req-part nil)
-        (opt-part '("My boss <required@company.invalid>"))
-        (attendees (gnus-icalendar-event--create-attendee-list req-part opt-part))
-        (expected-attendee-entry "^ATTENDEE.*;ROLE=%s-PARTICIPANT.*;RSVP=TRUE:mailto:%s.*$"))
+         (opt-part '("My boss <required@company.invalid>"))
+         (attendees (gnus-icalendar--create-attendee-list req-part opt-part))
+         (expected-attendee-entry "^ATTENDEE.*;ROLE=%s-PARTICIPANT.*;RSVP=TRUE:mailto:%s.*$"))
     (should (string-match (format expected-attendee-entry
                                   "OPT" (nth 0 opt-part))
                           attendees))))
+
