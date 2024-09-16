@@ -1,0 +1,21 @@
+* gnus-icalendar-request
+
+Extension of gnus-icalendar to format icalendar event requests based on [[https://www.rfc-editor.org/rfc/rfc5545][RFC 5545]].
+
+** Functionality TODOs
+
+- [ ] Rethink ways to capture event data :: Based on /message draft/ (basically as implemented so far), on /org headline/, on /org capture/, on …?
+- [ ] Improve start/end date capturing :: Other ways than org-timestamps? Also need to differentiate time ranges and whole day ranges.
+- [ ] Support recurring events :: Requires some way of capturing the RRULE parameter.
+- [ ] Update self participation type :: Default to ORGANIZER or NON-PARTICIPANT?
+- [ ] Sequence handling :: Requires extension of the ~gnus-icalendar-event-request~ class with the sequence property and a smart way to determine the actual sequence number. Necessary for any event modifications (cancelling, updating, adding participants, changing time)
+- [ ] Cancelling events :: Requires some sense of tracking of sent out events. Just let the user handle this with org mode or similar and provide functions to format the CANCEL message? 
+- [ ] Sending out updates :: After an attendee accepts or declines the RFC
+- [ ] Adding/Removing participants  ::
+- [ ] Updating event time ::
+
+** Code TODOs
+- [ ] Cleanup description creation
+- [ ] Check attendee capturing from email ~From~ header.
+- [ ] Based on insertion method remove the multipart section or switch ~multipart/alternative~ if ~text/plain~ contains the same data as the ~text/calendar~ part.
+- [ ] Split default attendee line format into a ~defvar~ in ~gnus-icalendar--format-attendee~.
