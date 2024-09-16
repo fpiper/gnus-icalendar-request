@@ -106,6 +106,7 @@ role."
     (insert (gnus-icalendar--build-vcalendar-from-vevent
              (gnus-icalendar--ical-from-event event)))))
 
+;;;###autoload
 (defun gnus-icalendar-from-message-and-insert (&optional date location)
   "Create a event request based on the current message.
 
@@ -163,7 +164,7 @@ or will be asked for if nil. Same for location."
                                                location
                                                organizer)
                                        (format "DTSTART:%s" start-time)))
-           (event (gnus-icalendar-request :uid uid
+           (event (gnus-icalendar-event-request :uid uid
                                                 :recur recur
                                                 :location location
                                                 :description description
