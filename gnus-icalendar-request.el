@@ -90,8 +90,8 @@
 (defun gnus-icalendar--format-ical-property-parameters (item)
   "Format a cons ITEM according to RFC5545 rules.
 
-Car of ITEM is the value and the cdr is an alist of additional
-property parameters attached to the value."
+Car of ITEM is the property value and the cdr is an alist of additional
+property parameters."
   (format "%s:%s"
           (seq-reduce
            (lambda (a b) (format "%s;%s=%s" a (car b) (cdr b)))
@@ -107,7 +107,10 @@ Optional argument ALIST specifies will be appended to the entry."
         (append
          alist
          (when (cdr entry)
-           `((CN . ,(cdr entry)))))))
+           `((CN . ,(if (string-match "[:;,]" (cdr entry))
+                        ;; quote property value if necessary
+                        (format "\"%s\"" (cdr entry))
+                      (cdr entry))))))))
 
 ;;;###autoload
 (defun gnus-icalendar-from-message-and-insert (&optional date location)
