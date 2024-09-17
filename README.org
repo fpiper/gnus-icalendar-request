@@ -19,3 +19,5 @@ Extension of gnus-icalendar to format icalendar event requests based on [[https:
 - [X] Check attendee capturing from email ~From~ header.
 - [ ] Based on insertion method remove the multipart section or switch ~multipart/alternative~ if ~text/plain~ contains the same data as the ~text/calendar~ part.
 - [X] +Split default attendee line format into a ~defvar~ in ~gnus-icalendar--format-attendee~.+
+- [ ] The updated rich cons I use to transfer mail + CN data does not fit with the ~gnus-icalendar-event object~ expectations, where all other functions only expect a list of strings for these fields. How can we fix this?
+  - Currently ~gnus-icalendar-event-from-buffer~ destroys attendee data and only returns the CN if present or the email but never both.
