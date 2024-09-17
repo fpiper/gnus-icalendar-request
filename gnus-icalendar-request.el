@@ -51,16 +51,12 @@ role."
   (with-slots (summary description location organizer recur uid start-time end-time req-participants opt-participants) event
     (let ((dtstamp (format-time-string "DTSTAMP:%Y%m%dT%H%M%SZ" nil t)) ;; current UTC time
           (summary (format "SUMMARY:%s" summary))
-          (description (when (and (stringp description) (not (string-empty-p description)))
+          (description (when (and (stringp description)
+                                  (not (string-empty-p description)))
                          (format "DESCRIPTION:%s"
-                                 (with-temp-buffer
-                                   (insert description)
-                                   (beginning-of-buffer)
-                                   (while (re-search-forward "\n" nil t)
-                                     (replace-match "\\n" t t))
-                                   (buffer-string))))) ;; TODO: How to do this properly?
-          (dtstart (format-time-string "DTSTART:%Y%m%dT%H%M%SZ" start-time t)) ;; start-time in UTC
-          (dtend (format-time-string "DTEND:%Y%m%dT%H%M%SZ" end-time t)) ;; end-time in UTC
+                                 (string-replace "\n" "\\n" description))))
+          (dtstart (format-time-string "DTSTART:%Y%m%dT%H%M%SZ" start-time t)) ;; in UTC -> suffix "Z"
+          (dtend (format-time-string "DTEND:%Y%m%dT%H%M%SZ" end-time t))
           (attendee (gnus-icalendar--create-attendee-list req-participants opt-participants))
           (location (when (and (stringp location) (not (string-empty-p location)))
                       (format "LOCATION:%s" location)))

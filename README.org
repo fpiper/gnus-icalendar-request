@@ -15,7 +15,7 @@ Extension of gnus-icalendar to format icalendar event requests based on [[https:
 - [ ] Updating event time ::
 
 ** Code TODOs
-- [ ] Cleanup description creation
+- [X] Cleanup description creation
 - [ ] Check attendee capturing from email ~From~ header.
 - [ ] Based on insertion method remove the multipart section or switch ~multipart/alternative~ if ~text/plain~ contains the same data as the ~text/calendar~ part.
 - [ ] Split default attendee line format into a ~defvar~ in ~gnus-icalendar--format-attendee~.
