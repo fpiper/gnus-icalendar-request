@@ -27,26 +27,6 @@
 
 (require 'gnus-icalendar)
 
-(defun gnus-icalendar--format-attendee (attendee role)
-  (when (member role '("req" "opt"))
-    (format "ATTENDEE;PARTSTAT=NEEDS-ACTION;ROLE=%s-PARTICIPANT;RSVP=TRUE:mailto:%s" (upcase role) attendee)))
-
-(defun gnus-icalendar--create-attendee-list (req &optional opt role)
-  "Format a list of event attendees.
-
-REQ is a list of required attendees emails, OPT of optional
-attendees and ROLE can be used to override the REQ attendees
-role."
-  (concat
-   (when req
-     (mapconcat
-      (lambda (req) (gnus-icalendar--format-attendee req (or role "req")))
-      req "\n"))
-   (when opt
-     (concat
-      "\n"
-      (gnus-icalendar--create-attendee-list opt nil "opt")))))
-
 (defun gnus-icalendar--ical-from-event (event)
   (with-slots (summary description location organizer recur uid start-time end-time req-participants opt-participants) event
     (let ((dtstamp (format-time-string "DTSTAMP:%Y%m%dT%H%M%SZ" nil t)) ;; current UTC time
@@ -57,10 +37,15 @@ role."
                                  (string-replace "\n" "\\n" description))))
           (dtstart (format-time-string "DTSTART:%Y%m%dT%H%M%SZ" start-time t)) ;; in UTC -> suffix "Z"
           (dtend (format-time-string "DTEND:%Y%m%dT%H%M%SZ" end-time t))
-          (attendee (gnus-icalendar--create-attendee-list req-participants opt-participants))
+          (attendee (mapconcat
+                     (lambda (p)
+                       (format "ATTENDEE%s"
+                               (gnus-icalendar--format-ical-property-parameters p)))
+                     (append req-participants opt-participants)
+                     "\n"))
           (location (when (and (stringp location) (not (string-empty-p location)))
                       (format "LOCATION:%s" location)))
-          (organizer (format "ORGANIZER:mailto:%s" organizer))
+          (organizer (format "ORGANIZER%s" organizer))
           (uid (format "UID:%s" uid))
           (sequence "SEQUENCE:0") ;; TODO: Consider follow-up event modifications.
           ;; TODO: handle recur
@@ -102,6 +87,28 @@ role."
     (insert (gnus-icalendar--build-vcalendar-from-vevent
              (gnus-icalendar--ical-from-event event)))))
 
+(defun gnus-icalendar--format-ical-property-parameters (item)
+  "Format a cons ITEM according to RFC5545 rules.
+
+Car of ITEM is the value and the cdr is an alist of additional
+property parameters attached to the value."
+  (format "%s:%s"
+          (seq-reduce
+           (lambda (a b) (format "%s;%s=%s" a (car b) (cdr b)))
+           (cdr item) "")
+          (car item)))
+
+(defun gnus-icalendar--parse-message-email-to-alist (entry &optional alist)
+  "Parse a (mail . name) cons ENTRY as returned by
+ `mail-header-parse-addresses'.
+
+Optional argument ALIST specifies will be appended to the entry."
+  (cons (format "mailto:%s" (car entry))
+        (append
+         alist
+         (when (cdr entry)
+           `((CN . ,(cdr entry)))))))
+
 ;;;###autoload
 (defun gnus-icalendar-from-message-and-insert (&optional date location)
   "Create a event request based on the current message.
@@ -138,22 +145,36 @@ or will be asked for if nil. Same for location."
            (summary (save-restriction
                       (message-narrow-to-headers)
                       (message-fetch-field "Subject")))
-           (organizer (caar (mail-header-parse-addresses
-                            (save-restriction
-                              (message-narrow-to-headers)
-                              (message-fetch-field "From"))))) ;; TODO insert common name for "name <mail@address.net>" addresses
+           (organizer (gnus-icalendar--format-ical-property-parameters
+                       (gnus-icalendar--parse-message-email-to-alist
+                        (car (mail-header-parse-addresses
+                              (save-restriction
+                                (message-narrow-to-headers)
+                                (message-fetch-field "From")))))))
            (rsvp nil) ;; TODO
-           (participation-type 'non-participant) ;; TODO
-           (req-participants (mapcar #'car
-                                     (mail-header-parse-addresses
-                                      (save-restriction
-                                        (message-narrow-to-headers)
-                                        (message-fetch-field "To")))))
-           (opt-participants (mapcar #'car
-                                     (mail-header-parse-addresses
-                                      (save-restriction
-                                        (message-narrow-to-headers)
-                                        (message-fetch-field "Cc")))))
+           (participation-type 'non-participant)
+           (req-participants
+            (mapcar (lambda (entry)
+                      (gnus-icalendar--parse-message-email-to-alist
+                       entry
+                       '((PARTSTAT . "NEEDS-ACTION")
+                         (ROLE . "REQ-PARTICIPANT")
+                         (RSVP . "TRUE"))))
+                    (mail-header-parse-addresses
+                     (save-restriction
+                       (message-narrow-to-headers)
+                       (message-fetch-field "To")))))
+           (opt-participants
+            (mapcar (lambda (entry)
+                      (gnus-icalendar--parse-message-email-to-alist
+                       entry
+                       '((PARTSTAT . "NEEDS-ACTION")
+                         (ROLE . "OPT-PARTICIPANT")
+                         (RSVP . "TRUE"))))
+                    (mail-header-parse-addresses
+                     (save-restriction
+                       (message-narrow-to-headers)
+                       (message-fetch-field "Cc")))))
            (uid (icalendar--create-uid (format "%s%s%s%s"
                                                summary
                                                description
