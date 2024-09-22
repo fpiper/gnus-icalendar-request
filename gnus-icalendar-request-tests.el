@@ -62,31 +62,21 @@ END:VEVENT"))
 
 (ert-deftest gnus-icalendar--ical-from-event ()
   ""
-  (let* ((event-string "\
-BEGIN:VEVENT
-DTSTAMP:20240915T120000Z
-DTSTART:20240917T080000Z
-DTEND:20240917T100000Z
-SUMMARY:Party
-DESCRIPTION:Lots of reasons to celebrate!
-ATTENDEE;PARTSTAT=NEEDS-ACTION;ROLE=REQ-PARTICIPANT;RSVP=TRUE;CN=Required CN:mailto:required@company.invalid
-ATTENDEE;PARTSTAT=NEEDS-ACTION;ROLE=REQ-PARTICIPANT;RSVP=TRUE:mailto:required2@company.invalid
-ATTENDEE;PARTSTAT=NEEDS-ACTION;ROLE=OPT-PARTICIPANT;RSVP=TRUE:mailto:optional@company.invalid
-LOCATION:Party room
-ORGANIZER:mailto:organizer@company.invalid
-UID:ac44f43e-f5cd-4b0a-878e-add01aeb12dd
-SEQUENCE:0
-END:VEVENT")
-         (vcalendar-string (format "\
-BEGIN:VCALENDAR
-PRODID:-//Google Inc//Google Calendar 70.9054//EN
-VERSION:2.0
-CALSCALE:GREGORIAN
-METHOD:REQUEST
-%s
-END:VCALENDAR"
-                                   event-string))
-         (event (gnus-icalendar-tests--get-ical-event vcalendar-string))
+  (let* ((event
+          (gnus-icalendar-event-request
+           :uid "ac44f43e-f5cd-4b0a-878e-add01aeb12dd"
+           :recur nil
+           :location "Party room"
+           :description "Lots of reasons to celebrate!"
+           :summary "Party"
+           :method "REQUEST"
+           :organizer "organizer@company.invalid"
+           :start-time (encode-time '(0 0 8 17 9 2024 nil -1 t))
+           :end-time (encode-time '(0 0 10 17 9 2024 nil -1 t))
+           :rsvp nil
+           :participation-type 'non-participant
+           :req-participants '("Required CN <required@company.invalid>" "required2@company.invalid")
+           :opt-participants '("optional@company.invalid")))
          (ical (gnus-icalendar--ical-from-event event)))
     (should (string-match "^BEGIN:VEVENT$" ical))
     (should (string-match "^END:VEVENT$" ical))
@@ -95,7 +85,7 @@ END:VCALENDAR"
     (should (string-match "^DTEND:20240917T100000Z$" ical))
     (should (string-match "^SUMMARY:Party$" ical))
     (should (string-match "^DESCRIPTION:Lots of reasons to celebrate!$" ical))
-    (should (string-match "^ATTENDEE;PARTSTAT=NEEDS-ACTION;ROLE=REQ-PARTICIPANT;RSVP=TRUE:mailto:required@company.invalid$" ical))
+    (should (string-match "^ATTENDEE;PARTSTAT=NEEDS-ACTION;ROLE=REQ-PARTICIPANT;RSVP=TRUE;CN=Required CN:mailto:required@company.invalid$" ical))
     (should (string-match "^ATTENDEE;PARTSTAT=NEEDS-ACTION;ROLE=OPT-PARTICIPANT;RSVP=TRUE:mailto:optional@company.invalid$" ical))
     (should (string-match "^LOCATION:Party room$" ical))
     (should (string-match "^ORGANIZER:mailto:organizer@company.invalid$" ical))

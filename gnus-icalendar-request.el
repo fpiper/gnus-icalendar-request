@@ -37,15 +37,36 @@
                                  (string-replace "\n" "\\n" description))))
           (dtstart (format-time-string "DTSTART:%Y%m%dT%H%M%SZ" start-time t)) ;; in UTC -> suffix "Z"
           (dtend (format-time-string "DTEND:%Y%m%dT%H%M%SZ" end-time t))
-          (attendee (mapconcat
-                     (lambda (p)
-                       (format "ATTENDEE%s"
-                               (gnus-icalendar--format-ical-property-parameters p)))
-                     (append req-participants opt-participants)
-                     "\n"))
+          (attendee
+           (mapconcat
+            (lambda (p)
+              (format
+               "ATTENDEE%s"
+               (gnus-icalendar--format-ical-property-parameters p)))
+            (append
+             (mapcar (lambda (entry)
+                       (gnus-icalendar--parse-message-email-to-alist
+                        entry
+                        '((PARTSTAT . "NEEDS-ACTION")
+                          (ROLE . "REQ-PARTICIPANT")
+                          (RSVP . "TRUE"))))
+                     (mail-header-parse-addresses (mapconcat #'identity req-participants ", ")))
+             (mapcar (lambda (entry)
+                       (gnus-icalendar--parse-message-email-to-alist
+                        entry
+                        '((PARTSTAT . "NEEDS-ACTION")
+                          (ROLE . "OPT-PARTICIPANT")
+                          (RSVP . "TRUE"))))
+                     (mail-header-parse-addresses (mapconcat #'identity opt-participants ", "))))
+            "\n"))
           (location (when (and (stringp location) (not (string-empty-p location)))
                       (format "LOCATION:%s" location)))
-          (organizer (format "ORGANIZER%s" organizer))
+          (organizer (format "ORGANIZER%s"
+                             (gnus-icalendar--format-ical-property-parameters
+                              (gnus-icalendar--parse-message-email-to-alist
+                               (car (mail-header-parse-addresses
+                                     organizer))
+                               ))))
           (uid (format "UID:%s" uid))
           (sequence "SEQUENCE:0") ;; TODO: Consider follow-up event modifications.
           ;; TODO: handle recur
@@ -148,36 +169,19 @@ or will be asked for if nil. Same for location."
            (summary (save-restriction
                       (message-narrow-to-headers)
                       (message-fetch-field "Subject")))
-           (organizer (gnus-icalendar--format-ical-property-parameters
-                       (gnus-icalendar--parse-message-email-to-alist
-                        (car (mail-header-parse-addresses
-                              (save-restriction
-                                (message-narrow-to-headers)
-                                (message-fetch-field "From")))))))
+           (organizer (save-restriction
+                        (message-narrow-to-headers)
+                        (message-fetch-field "From")))
            (rsvp nil) ;; TODO
            (participation-type 'non-participant)
            (req-participants
-            (mapcar (lambda (entry)
-                      (gnus-icalendar--parse-message-email-to-alist
-                       entry
-                       '((PARTSTAT . "NEEDS-ACTION")
-                         (ROLE . "REQ-PARTICIPANT")
-                         (RSVP . "TRUE"))))
-                    (mail-header-parse-addresses
-                     (save-restriction
-                       (message-narrow-to-headers)
-                       (message-fetch-field "To")))))
+            (save-restriction
+              (message-narrow-to-headers)
+              (message-fetch-field "To")))
            (opt-participants
-            (mapcar (lambda (entry)
-                      (gnus-icalendar--parse-message-email-to-alist
-                       entry
-                       '((PARTSTAT . "NEEDS-ACTION")
-                         (ROLE . "OPT-PARTICIPANT")
-                         (RSVP . "TRUE"))))
-                    (mail-header-parse-addresses
                      (save-restriction
                        (message-narrow-to-headers)
-                       (message-fetch-field "Cc")))))
+                       (message-fetch-field "Cc")))
            (uid (icalendar--create-uid (format "%s%s%s%s"
                                                summary
                                                description
